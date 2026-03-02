@@ -82,19 +82,24 @@ const FRAGMENT_SHADER = `
     // 4. Layers
     vec4 clearColor = texture2D(u_clearBg, distorted_uv);
     
-    // Standard Gaussian Blur (9-tap)
+    // Improved Multi-tap Gaussian Blur to avoid ghosting
+    // We use a broader distribution with smaller steps
     vec4 blurColor = vec4(0.0);
-    float offset = 0.005; // Base blur spread
+    float blurRadius = 0.015; // Controlled radius
     
-    blurColor += texture2D(u_clearBg, distorted_uv) * 0.227027;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, 0.0)) * 0.1945946;
-    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, 0.0)) * 0.1945946;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, offset)) * 0.1945946;
-    blurColor += texture2D(u_clearBg, distorted_uv - vec2(0.0, offset)) * 0.1945946;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, offset)) * 0.1216216;
-    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, offset)) * 0.1216216;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, -offset)) * 0.1216216;
-    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, -offset)) * 0.1216216;
+    // 13-tap jittered sampling for smooth dispersion
+    blurColor += texture2D(u_clearBg, distorted_uv) * 0.15;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius * 0.4, blurRadius * 0.7)) * 0.12;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius * 0.4, -blurRadius * 0.7)) * 0.12;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius * 0.7, -blurRadius * 0.4)) * 0.12;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius * 0.7, blurRadius * 0.4)) * 0.12;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, blurRadius)) * 0.09;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, -blurRadius)) * 0.09;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius, 0.0)) * 0.09;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius, 0.0)) * 0.09;
+    
+    // Normalize color
+    blurColor = blurColor / (0.15 + 0.12 * 4.0 + 0.09 * 4.0);
     
     // 5. Fog Layer (Smooth, no procedural noise)
     vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0); // Slightly cool white
