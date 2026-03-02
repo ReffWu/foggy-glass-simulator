@@ -44,60 +44,66 @@ const FRAGMENT_SHADER = `
   uniform float u_fogDensity;
   uniform float u_time;
   uniform vec2 u_resolution;
+  uniform vec2 u_imgSize;
 
-  // Simple noise function for fog texture
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), f.x),
-               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+  // Manual fit calculation to avoid stretching
+  vec2 get_fitted_uv() {
+    float canvasAspect = u_resolution.x / u_resolution.y;
+    float imgAspect = u_imgSize.x / u_imgSize.y;
+    vec2 fitted_uv = v_uv;
+    
+    if (imgAspect > canvasAspect) {
+      float scale = canvasAspect / imgAspect;
+      fitted_uv.x = v_uv.x * scale + (1.0 - scale) * 0.5;
+    } else {
+      float scale = imgAspect / canvasAspect;
+      fitted_uv.y = v_uv.y * scale + (1.0 - scale) * 0.5;
+    }
+    return fitted_uv;
   }
 
   void main() {
-    // 1. Sample the mask (R channel is enough)
+    vec2 fitted_uv = get_fitted_uv();
+    
+    // 1. Sample the mask
     float mask = texture2D(u_mask, v_uv).a;
     
-    // 2. Generate Normals from mask for Refraction/Distortion
+    // 2. Generate Normals from mask for Refraction
     float texelSize = 1.0 / max(u_resolution.x, u_resolution.y);
     float m_left  = texture2D(u_mask, v_uv + vec2(-texelSize, 0.0)).a;
     float m_right = texture2D(u_mask, v_uv + vec2(texelSize, 0.0)).a;
     float m_up    = texture2D(u_mask, v_uv + vec2(0.0, -texelSize)).a;
     float m_down  = texture2D(u_mask, v_uv + vec2(0.0, texelSize)).a;
-    
     vec2 normal = vec2(m_left - m_right, m_up - m_down);
     
-    // 3. Fog Noise
-    float fogNoise = noise(v_uv * 50.0 + u_time * 0.1) * 0.15;
-    float currentFog = clamp(u_fogDensity + fogNoise, 0.0, 1.0);
+    // 3. Distortion/Refraction calculation
+    vec2 distorted_uv = fitted_uv + normal * 0.015;
     
-    // 4. Refraction Calculation
-    // Only distort when mask is being cleared or near edges
-    vec2 refractUv = v_uv + normal * 0.02 * (1.0 - mask);
+    // 4. Layers
+    vec4 clearColor = texture2D(u_clearBg, distorted_uv);
     
-    // 5. Blending
-    vec4 clearColor = texture2D(u_clearBg, v_uv + normal * 0.01 * (1.0 - mask));
+    // Natural Blur simulation using multi-sampling (natural Gaussian-like)
+    vec4 blurColor = vec4(0.0);
+    float samples = 0.0;
+    for(float x = -2.0; x <= 2.0; x += 1.0) {
+      for(float y = -2.0; y <= 2.0; y += 1.0) {
+        blurColor += texture2D(u_clearBg, distorted_uv + vec2(x, y) * 0.003);
+        samples += 1.0;
+      }
+    }
+    blurColor /= samples;
     
-    // Simple blur simulation: sample offset points
-    vec4 blurColor = texture2D(u_clearBg, v_uv + vec2(0.01, 0.01)) * 0.25;
-    blurColor += texture2D(u_clearBg, v_uv + vec2(-0.01, 0.01)) * 0.25;
-    blurColor += texture2D(u_clearBg, v_uv + vec2(0.01, -0.01)) * 0.25;
-    blurColor += texture2D(u_clearBg, v_uv + vec2(-0.01, -0.01)) * 0.25;
+    // 5. Fog Layer (Smooth, no procedural noise)
+    vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0); // Slightly cool white
+    float fogAlpha = 0.3 + u_fogDensity * 0.6;
+    vec4 compositeFog = mix(blurColor, fogTint, fogAlpha);
     
-    // Apply fog tint
-    vec4 fogColor = vec4(0.9, 0.95, 1.0, 1.0) * (0.4 + u_fogDensity * 0.6);
-    vec4 compositeFog = mix(blurColor, fogColor, 0.3 + currentFog * 0.5);
-    
-    // Final mix based on mask
+    // 6. Final mix based on mask
     vec4 finalColor = mix(compositeFog, clearColor, mask);
     
-    // 6. Specular Highlight on edges
+    // 7. Specular highlight
     float edge = length(normal);
-    float spec = pow(max(0.0, edge), 3.0) * 0.5;
+    float spec = pow(max(0.0, edge), 4.0) * 0.4;
     finalColor += vec4(spec);
 
     gl_FragColor = finalColor;
@@ -119,6 +125,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
   const glRef = useRef<WebGLRenderingContext | null>(null);
   const programRef = useRef<WebGLProgram | null>(null);
   const texturesRef = useRef<{ bg?: WebGLTexture; mask?: WebGLTexture }>({});
+  const imgSizeRef = useRef({ width: 1, height: 1 });
 
   useImperativeHandle(ref, () => ({
     resetFog: () => {
@@ -192,6 +199,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      imgSizeRef.current = { width: img.width, height: img.height };
       gl.bindTexture(gl.TEXTURE_2D, texturesRef.current.bg!);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -256,6 +264,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.uniform1f(gl.getUniformLocation(program, 'u_fogDensity'), settings.blurAmount / 40);
     gl.uniform1f(gl.getUniformLocation(program, 'u_time'), time);
     gl.uniform2f(gl.getUniformLocation(program, 'u_resolution'), glCanvasRef.current!.width, glCanvasRef.current!.height);
+    gl.uniform2f(gl.getUniformLocation(program, 'u_imgSize'), imgSizeRef.current.width, imgSizeRef.current.height);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texturesRef.current.bg!);
