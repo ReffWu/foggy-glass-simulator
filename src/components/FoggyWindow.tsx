@@ -28,7 +28,6 @@ interface Drip {
 const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl, settings }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
-  const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
   const [isDrawing, setIsDrawing] = useState(false);
@@ -69,18 +68,12 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     const mainCanvas = mainCanvasRef.current;
     if (!container || !mainCanvas) return;
 
-    let isUnmounted = false;
-
     const setupCanvases = () => {
       const { width, height } = container.getBoundingClientRect();
       mainCanvas.width = width;
       mainCanvas.height = height;
 
-      if (!bgCanvasRef.current) bgCanvasRef.current = document.createElement('canvas');
       if (!maskCanvasRef.current) maskCanvasRef.current = document.createElement('canvas');
-
-      bgCanvasRef.current.width = width;
-      bgCanvasRef.current.height = height;
       
       const oldMask = maskCanvasRef.current;
       const newMask = document.createElement('canvas');
@@ -90,129 +83,23 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
         newMask.getContext('2d')?.drawImage(oldMask, 0, 0);
       }
       maskCanvasRef.current = newMask;
-
-      renderBgCanvas(width, height);
-    };
-
-    const renderBgCanvas = (width: number, height: number) => {
-      const bgCanvas = bgCanvasRef.current;
-      if (!bgCanvas) return;
-      const ctx = bgCanvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        if (isUnmounted) return;
-        
-        ctx.clearRect(0, 0, width, height);
-        
-        const imgRatio = img.width / img.height;
-        const canvasRatio = width / height;
-        let drawWidth = width;
-        let drawHeight = height;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (imgRatio > canvasRatio) {
-          drawWidth = height * imgRatio;
-          offsetX = (width - drawWidth) / 2;
-        } else {
-          drawHeight = width / imgRatio;
-          offsetY = (height - drawHeight) / 2;
-        }
-
-        // Draw blurred image
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.filter = `blur(20px) brightness(0.85)`; // Fixed visual blur radius
-        
-        const padding = 40; 
-        ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
-        ctx.restore();
-        
-        // Draw fog overlay based on density
-        const density = settingsRef.current.blurAmount / 40; // 0 to 1
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.1 + density * 0.45})`;
-        ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = `rgba(180, 210, 255, ${density * 0.15})`;
-        ctx.fillRect(0, 0, width, height);
-      };
-      img.src = imageUrl;
     };
 
     setupCanvases();
 
-    const handleResize = () => {
-      setupCanvases();
-    };
+    const handleResize = () => setupCanvases();
     window.addEventListener('resize', handleResize);
-
-    return () => {
-      isUnmounted = true;
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, [imageUrl]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    const bgCanvas = bgCanvasRef.current;
-    if (!container || !bgCanvas) return;
-    
-    const { width, height } = container.getBoundingClientRect();
-    
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const ctx = bgCanvas.getContext('2d');
-      if (!ctx) return;
-      
-      ctx.clearRect(0, 0, width, height);
-      
-      const imgRatio = img.width / img.height;
-      const canvasRatio = width / height;
-      let drawWidth = width;
-      let drawHeight = height;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (imgRatio > canvasRatio) {
-        drawWidth = height * imgRatio;
-        offsetX = (width - drawWidth) / 2;
-      } else {
-        drawHeight = width / imgRatio;
-        offsetY = (height - drawHeight) / 2;
-      }
-
-      // Draw blurred image
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.filter = `blur(20px) brightness(0.85)`;
-      
-      const padding = 40;
-      ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
-      ctx.restore();
-      
-      // Draw fog overlay based on density
-      const density = settings.blurAmount / 40; // 0 to 1
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.1 + density * 0.45})`;
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = `rgba(180, 210, 255, ${density * 0.15})`;
-      ctx.fillRect(0, 0, width, height);
-    };
-    img.src = imageUrl;
-  }, [settings.blurAmount, imageUrl]);
-
-  useEffect(() => {
     let isUnmounted = false;
-
     const loop = () => {
       if (isUnmounted) return;
       updateAndDraw();
       animationFrameRef.current = requestAnimationFrame(loop);
     };
     loop();
-
     return () => {
       isUnmounted = true;
       cancelAnimationFrame(animationFrameRef.current);
@@ -221,10 +108,9 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
 
   const updateAndDraw = () => {
     const mainCanvas = mainCanvasRef.current;
-    const bgCanvas = bgCanvasRef.current;
     const maskCanvas = maskCanvasRef.current;
     
-    if (!mainCanvas || !bgCanvas || !maskCanvas) return;
+    if (!mainCanvas || !maskCanvas) return;
     
     const mainCtx = mainCanvas.getContext('2d');
     const maskCtx = maskCanvas.getContext('2d');
@@ -235,32 +121,29 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     
     for (let i = dripsRef.current.length - 1; i >= 0; i--) {
       const drip = dripsRef.current[i];
-      
       maskCtx.beginPath();
       maskCtx.arc(drip.x, drip.y, drip.width / 2, 0, Math.PI * 2);
       maskCtx.fill();
 
       drip.speed += 0.06 * settingsRef.current.dripSpeed;
       drip.speed *= 0.88;
-      
       drip.y += drip.speed;
-      
-      if (Math.random() < 0.2) {
-        drip.x += (Math.random() - 0.5) * drip.wiggle;
-      }
-
+      if (Math.random() < 0.2) drip.x += (Math.random() - 0.5) * drip.wiggle;
       drip.volume -= drip.speed;
-
-      if (drip.volume <= 0) {
-        dripsRef.current.splice(i, 1);
-      }
+      if (drip.volume <= 0) dripsRef.current.splice(i, 1);
     }
 
     mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
     
+    // Draw fog layer
+    const density = settingsRef.current.blurAmount / 40;
     mainCtx.globalCompositeOperation = 'source-over';
-    mainCtx.drawImage(bgCanvas, 0, 0);
+    mainCtx.fillStyle = `rgba(255, 255, 255, ${0.1 + density * 0.45})`;
+    mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.fillStyle = `rgba(180, 210, 255, ${density * 0.15})`;
+    mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
     
+    // Punch holes
     mainCtx.globalCompositeOperation = 'destination-out';
     mainCtx.drawImage(maskCanvas, 0, 0);
   };

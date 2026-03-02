@@ -69,11 +69,11 @@ export default function App() {
             <FoggyWindow ref={foggyWindowRef} imageUrl={imageUrl} settings={settings} />
             
             {/* Floating Panels */}
-            <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-20 w-full max-w-[calc(100%-2rem)] sm:max-w-md px-4 pointer-events-none">
+            <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-40 w-full max-w-[calc(100%-2rem)] sm:max-w-md px-4 pointer-events-none">
               
               {/* Settings Panel */}
               {activePanel === 'settings' && (
-                <div className="w-full bg-black/60 sm:bg-black/40 backdrop-blur-3xl border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-200 overflow-y-auto max-h-[60vh]">
+                <div className="w-full bg-black/80 sm:bg-black/40 backdrop-blur-3xl border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-200 overflow-y-auto max-h-[50vh]">
                   <div className="flex justify-between items-center mb-4 sm:mb-6">
                     <h3 className="font-medium tracking-tight">Settings</h3>
                     <button onClick={() => setActivePanel(null)} className="text-white/50 hover:text-white transition-colors bg-white/10 rounded-full p-1">
@@ -129,7 +129,7 @@ export default function App() {
 
               {/* Gallery Panel */}
               {activePanel === 'gallery' && (
-                <div className="w-full bg-black/60 sm:bg-black/40 backdrop-blur-3xl border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-200 overflow-y-auto max-h-[60vh]">
+                <div className="w-full bg-black/80 sm:bg-black/40 backdrop-blur-3xl border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-200 overflow-y-auto max-h-[50vh]">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-medium tracking-tight">Backgrounds</h3>
                     <button onClick={() => setActivePanel(null)} className="text-white/50 hover:text-white transition-colors bg-white/10 rounded-full p-1">
@@ -162,7 +162,7 @@ export default function App() {
             </div>
 
             {/* Floating Dock */}
-            <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 w-auto">
+            <div className="absolute bottom-10 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 w-auto">
               <div className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-black/60 sm:bg-black/40 backdrop-blur-3xl border border-white/10 rounded-full shadow-2xl">
                 <button
                   onClick={() => togglePanel('gallery')}
