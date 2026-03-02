@@ -122,8 +122,12 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
   const programRef = useRef<WebGLProgram | null>(null);
   const texturesRef = useRef<{ bg?: WebGLTexture; mask?: WebGLTexture }>({});
   const imgSizeRef = useRef({ width: 1, height: 1 });
+  const settingsRef = useRef(settings);
 
-  useImperativeHandle(ref, () => ({
+  // Sync settings to ref for access in physics/render loops
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
     resetFog: () => {
       const maskCtx = maskCanvasRef.current.getContext('2d');
       maskCtx?.clearRect(0, 0, maskCanvasRef.current.width, maskCanvasRef.current.height);
@@ -225,7 +229,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
       maskCtx.fillStyle = 'rgba(0, 255, 0, 1.0)';
       maskCtx.fill();
 
-      drip.speed += 0.06 * settings.dripSpeed;
+      drip.speed += 0.06 * settingsRef.current.dripSpeed;
       drip.speed *= 0.88;
       drip.y += drip.speed;
       if (Math.random() < 0.2) drip.x += (Math.random() - 0.5) * drip.wiggle;
@@ -251,8 +255,8 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
 
     gl.uniform1i(gl.getUniformLocation(program, 'u_clearBg'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
-    gl.uniform1f(gl.getUniformLocation(program, 'u_fogDensity'), settings.blurAmount / 40);
-    gl.uniform1f(gl.getUniformLocation(program, 'u_fogColorFactor'), settings.fogColor);
+    gl.uniform1f(gl.getUniformLocation(program, 'u_fogDensity'), settingsRef.current.blurAmount / 40);
+    gl.uniform1f(gl.getUniformLocation(program, 'u_fogColorFactor'), settingsRef.current.fogColor);
     gl.uniform1f(gl.getUniformLocation(program, 'u_time'), time);
     gl.uniform2f(gl.getUniformLocation(program, 'u_resolution'), glCanvasRef.current!.width, glCanvasRef.current!.height);
     gl.uniform2f(gl.getUniformLocation(program, 'u_imgSize'), imgSizeRef.current.width, imgSizeRef.current.height);
