@@ -76,11 +76,11 @@ const FRAGMENT_SHADER = `
     float m_down  = texture2D(u_mask, v_uv + vec2(0.0, texelSize)).a;
     vec2 normal = vec2(m_left - m_right, m_up - m_down);
     
-    // 3. Distortion/Refraction calculation
-    vec2 distorted_uv = fitted_uv + normal * 0.015;
+    // 3. Distortion/Refraction calculation (DISABLED as requested)
+    vec2 distorted_uv = fitted_uv; 
     
     // 4. Layers
-    vec4 clearColor = texture2D(u_clearBg, distorted_uv);
+    vec4 clearColor = texture2D(u_clearBg, fitted_uv);
     
     // Improved Multi-tap Gaussian Blur to avoid ghosting
     // We use a broader distribution with smaller steps
@@ -88,15 +88,15 @@ const FRAGMENT_SHADER = `
     float blurRadius = 0.015; // Controlled radius
     
     // 13-tap jittered sampling for smooth dispersion
-    blurColor += texture2D(u_clearBg, distorted_uv) * 0.15;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius * 0.4, blurRadius * 0.7)) * 0.12;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius * 0.4, -blurRadius * 0.7)) * 0.12;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius * 0.7, -blurRadius * 0.4)) * 0.12;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius * 0.7, blurRadius * 0.4)) * 0.12;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, blurRadius)) * 0.09;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, -blurRadius)) * 0.09;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(blurRadius, 0.0)) * 0.09;
-    blurColor += texture2D(u_clearBg, distorted_uv + vec2(-blurRadius, 0.0)) * 0.09;
+    blurColor += texture2D(u_clearBg, fitted_uv) * 0.15;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius * 0.4, blurRadius * 0.7)) * 0.12;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius * 0.4, -blurRadius * 0.7)) * 0.12;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius * 0.7, -blurRadius * 0.4)) * 0.12;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius * 0.7, blurRadius * 0.4)) * 0.12;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(0.0, blurRadius)) * 0.09;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(0.0, -blurRadius)) * 0.09;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius, 0.0)) * 0.09;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius, 0.0)) * 0.09;
     
     // Normalize color
     blurColor = blurColor / (0.15 + 0.12 * 4.0 + 0.09 * 4.0);
