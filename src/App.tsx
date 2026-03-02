@@ -5,7 +5,6 @@ import FoggyWindow, { FoggySettings, FoggyWindowHandle } from './components/Fogg
 const PRESET_IMAGES = [
   { id: 'night', url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=2000&auto=format&fit=crop', label: 'Night Street' },
   { id: 'city', url: 'https://images.unsplash.com/photo-1449844908441-8829872d2607?q=80&w=2000&auto=format&fit=crop', label: 'City Day' },
-  { id: 'mountain', url: 'https://images.unsplash.com/photo-1506744626753-eba7bc3613ce?q=80&w=2000&auto=format&fit=crop', label: 'Mountain Lake' },
   { id: 'cafe', url: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2000&auto=format&fit=crop', label: 'Cozy Cafe' },
   { id: 'forest', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2000&auto=format&fit=crop', label: 'Forest Road' },
 ];
