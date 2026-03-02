@@ -90,8 +90,8 @@ const FRAGMENT_SHADER = `
     blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.507431,  0.064425) * blurRadius) * 0.1;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.896420,  0.412458) * blurRadius) * 0.1;
     
-    vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0);
-    float fogAlpha = 0.3 + u_fogDensity * 0.6;
+    vec4 fogTint = vec4(0.95, 0.98, 1.0, 1.0);
+    float fogAlpha = u_fogDensity; // Direct mapping
     vec4 compositeFog = mix(blurColor, fogTint, fogAlpha);
     
     vec4 finalColor = mix(compositeFog, clearColor, mask);
