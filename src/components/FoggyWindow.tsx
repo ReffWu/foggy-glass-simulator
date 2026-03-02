@@ -65,7 +65,7 @@ const FRAGMENT_SHADER = `
     vec2 fitted_uv = get_fitted_uv();
     vec4 maskSample = texture2D(u_mask, v_uv);
     float mask = maskSample.a;
-    float isDrip = maskSample.g; // G channel holds our drip indicator
+    float isDrip = maskSample.g; 
 
     float texelSize = 1.0 / max(u_resolution.x, u_resolution.y);
     float m_left  = texture2D(u_mask, v_uv + vec2(-texelSize, 0.0)).a;
@@ -76,18 +76,19 @@ const FRAGMENT_SHADER = `
     
     vec4 clearColor = texture2D(u_clearBg, fitted_uv);
     
+    // High-quality Poisson Disc Blur to eliminate ghosting
     vec4 blurColor = vec4(0.0);
-    float blurRadius = 0.015;
-    blurColor += texture2D(u_clearBg, fitted_uv) * 0.15;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius * 0.4, blurRadius * 0.7)) * 0.12;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius * 0.4, -blurRadius * 0.7)) * 0.12;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius * 0.7, -blurRadius * 0.4)) * 0.12;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius * 0.7, blurRadius * 0.4)) * 0.12;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(0.0, blurRadius)) * 0.09;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(0.0, -blurRadius)) * 0.09;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius, 0.0)) * 0.09;
-    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius, 0.0)) * 0.09;
-    blurColor = blurColor / (0.15 + 0.12 * 4.0 + 0.09 * 4.0);
+    float blurRadius = 0.012; 
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-0.326212, -0.405805) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-0.840144, -0.073580) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-0.695914,  0.457137) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2(-0.203345,  0.620716) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.962340, -0.194983) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.473434, -0.480026) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.519456,  0.767022) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.185461, -0.893124) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.507431,  0.064425) * blurRadius) * 0.1;
+    blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.896420,  0.412458) * blurRadius) * 0.1;
     
     vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0);
     float fogAlpha = 0.3 + u_fogDensity * 0.6;
@@ -95,7 +96,6 @@ const FRAGMENT_SHADER = `
     
     vec4 finalColor = mix(compositeFog, clearColor, mask);
     
-    // Specular highlight ONLY for drips
     float edge = length(normal);
     float spec = pow(max(0.0, edge), 4.0) * 0.6 * isDrip;
     finalColor += vec4(spec);
@@ -148,6 +148,9 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
       const s = gl.createShader(type)!;
       gl.shaderSource(s, source);
       gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+      }
       return s;
     };
 
@@ -216,8 +219,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
       const drip = dripsRef.current[i];
       maskCtx.beginPath();
       maskCtx.arc(drip.x, drip.y, drip.width / 2, 0, Math.PI * 2);
-      
-      // Use Green channel (G) to mark this as a drip
       maskCtx.fillStyle = 'rgba(0, 255, 0, 1.0)';
       maskCtx.fill();
 
@@ -296,9 +297,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     if (!ctx) return;
     const radius = settings.brushSize;
     ctx.globalCompositeOperation = 'source-over';
-    
-    // User strokes: Red channel (R) = 255, Alpha = 255
-    // This makes them fully opaque but carries no Green (drip) signal
     ctx.strokeStyle = 'rgba(255, 0, 0, 1.0)';
     ctx.lineWidth = radius * 2;
     ctx.lineCap = 'round';
