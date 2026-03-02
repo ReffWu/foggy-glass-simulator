@@ -1,0 +1,5 @@
+{
+  "name": "Foggy Glass Simulator",
+  "description": "Upload a photo and draw on a simulated foggy glass with realistic dripping physics.",
+  "requestFramePermissions": []
+}
