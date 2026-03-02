@@ -82,16 +82,19 @@ const FRAGMENT_SHADER = `
     // 4. Layers
     vec4 clearColor = texture2D(u_clearBg, distorted_uv);
     
-    // Natural Blur simulation using multi-sampling (natural Gaussian-like)
+    // Standard Gaussian Blur (9-tap)
     vec4 blurColor = vec4(0.0);
-    float samples = 0.0;
-    for(float x = -2.0; x <= 2.0; x += 1.0) {
-      for(float y = -2.0; y <= 2.0; y += 1.0) {
-        blurColor += texture2D(u_clearBg, distorted_uv + vec2(x, y) * 0.003);
-        samples += 1.0;
-      }
-    }
-    blurColor /= samples;
+    float offset = 0.005; // Base blur spread
+    
+    blurColor += texture2D(u_clearBg, distorted_uv) * 0.227027;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, 0.0)) * 0.1945946;
+    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, 0.0)) * 0.1945946;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(0.0, offset)) * 0.1945946;
+    blurColor += texture2D(u_clearBg, distorted_uv - vec2(0.0, offset)) * 0.1945946;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, offset)) * 0.1216216;
+    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, offset)) * 0.1216216;
+    blurColor += texture2D(u_clearBg, distorted_uv + vec2(offset, -offset)) * 0.1216216;
+    blurColor += texture2D(u_clearBg, distorted_uv - vec2(offset, -offset)) * 0.1216216;
     
     // 5. Fog Layer (Smooth, no procedural noise)
     vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0); // Slightly cool white
