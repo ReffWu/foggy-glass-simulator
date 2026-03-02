@@ -16,6 +16,7 @@ export default function App() {
     blurAmount: 12,
     brushSize: 12,
     dripSpeed: 1.0,
+    fogColor: 1.0, // Default to white
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +121,18 @@ export default function App() {
                   </div>
                   
                   <div className="space-y-8 text-white/90">
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm font-semibold tracking-wide">
+                        <label>Fog Color (Black to White)</label>
+                        <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{Math.round(settings.fogColor * 100)}%</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full bg-black border border-white/20" />
+                        <input type="range" min="0" max="1" step="0.01" value={settings.fogColor} onChange={(e) => setSettings({...settings, fogColor: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
+                        <div className="w-4 h-4 rounded-full bg-white border border-white/20" />
+                      </div>
+                    </div>
+
                     <div className="space-y-4">
                       <div className="flex justify-between text-sm font-semibold tracking-wide">
                         <label>Fog Density</label>

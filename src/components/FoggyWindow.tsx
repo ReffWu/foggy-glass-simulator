@@ -4,6 +4,7 @@ export interface FoggySettings {
   blurAmount: number;
   brushSize: number;
   dripSpeed: number;
+  fogColor: number; // 0 for Black, 1 for White
 }
 
 export interface FoggyWindowHandle {
@@ -42,6 +43,7 @@ const FRAGMENT_SHADER = `
   uniform sampler2D u_clearBg;
   uniform sampler2D u_mask;
   uniform float u_fogDensity;
+  uniform float u_fogColorFactor;
   uniform float u_time;
   uniform vec2 u_resolution;
   uniform vec2 u_imgSize;
@@ -76,7 +78,7 @@ const FRAGMENT_SHADER = `
     
     vec4 clearColor = texture2D(u_clearBg, fitted_uv);
     
-    // High-quality Poisson Disc Blur to eliminate ghosting
+    // High-quality Poisson Disc Blur
     vec4 blurColor = vec4(0.0);
     float blurRadius = 0.012; 
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(-0.326212, -0.405805) * blurRadius) * 0.1;
@@ -90,8 +92,9 @@ const FRAGMENT_SHADER = `
     blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.507431,  0.064425) * blurRadius) * 0.1;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2( 0.896420,  0.412458) * blurRadius) * 0.1;
     
-    vec4 fogTint = vec4(0.95, 0.98, 1.0, 1.0);
-    float fogAlpha = u_fogDensity; // Direct mapping
+    // Dynamic Fog Tint based on setting
+    vec4 fogTint = mix(vec4(0.0, 0.0, 0.0, 1.0), vec4(0.95, 0.98, 1.0, 1.0), u_fogColorFactor);
+    float fogAlpha = u_fogDensity;
     vec4 compositeFog = mix(blurColor, fogTint, fogAlpha);
     
     vec4 finalColor = mix(compositeFog, clearColor, mask);
@@ -249,6 +252,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.uniform1i(gl.getUniformLocation(program, 'u_clearBg'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
     gl.uniform1f(gl.getUniformLocation(program, 'u_fogDensity'), settings.blurAmount / 40);
+    gl.uniform1f(gl.getUniformLocation(program, 'u_fogColorFactor'), settings.fogColor);
     gl.uniform1f(gl.getUniformLocation(program, 'u_time'), time);
     gl.uniform2f(gl.getUniformLocation(program, 'u_resolution'), glCanvasRef.current!.width, glCanvasRef.current!.height);
     gl.uniform2f(gl.getUniformLocation(program, 'u_imgSize'), imgSizeRef.current.width, imgSizeRef.current.height);
