@@ -46,7 +46,6 @@ const FRAGMENT_SHADER = `
   uniform vec2 u_resolution;
   uniform vec2 u_imgSize;
 
-  // Manual fit calculation to avoid stretching
   vec2 get_fitted_uv() {
     float canvasAspect = u_resolution.x / u_resolution.y;
     float imgAspect = u_imgSize.x / u_imgSize.y;
@@ -64,11 +63,10 @@ const FRAGMENT_SHADER = `
 
   void main() {
     vec2 fitted_uv = get_fitted_uv();
-    
-    // 1. Sample the mask
-    float mask = texture2D(u_mask, v_uv).a;
-    
-    // 2. Generate Normals from mask for Refraction
+    vec4 maskSample = texture2D(u_mask, v_uv);
+    float mask = maskSample.a;
+    float isDrip = maskSample.g; // G channel holds our drip indicator
+
     float texelSize = 1.0 / max(u_resolution.x, u_resolution.y);
     float m_left  = texture2D(u_mask, v_uv + vec2(-texelSize, 0.0)).a;
     float m_right = texture2D(u_mask, v_uv + vec2(texelSize, 0.0)).a;
@@ -76,18 +74,10 @@ const FRAGMENT_SHADER = `
     float m_down  = texture2D(u_mask, v_uv + vec2(0.0, texelSize)).a;
     vec2 normal = vec2(m_left - m_right, m_up - m_down);
     
-    // 3. Distortion/Refraction calculation (DISABLED as requested)
-    vec2 distorted_uv = fitted_uv; 
-    
-    // 4. Layers
     vec4 clearColor = texture2D(u_clearBg, fitted_uv);
     
-    // Improved Multi-tap Gaussian Blur to avoid ghosting
-    // We use a broader distribution with smaller steps
     vec4 blurColor = vec4(0.0);
-    float blurRadius = 0.015; // Controlled radius
-    
-    // 13-tap jittered sampling for smooth dispersion
+    float blurRadius = 0.015;
     blurColor += texture2D(u_clearBg, fitted_uv) * 0.15;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius * 0.4, blurRadius * 0.7)) * 0.12;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius * 0.4, -blurRadius * 0.7)) * 0.12;
@@ -97,21 +87,17 @@ const FRAGMENT_SHADER = `
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(0.0, -blurRadius)) * 0.09;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(blurRadius, 0.0)) * 0.09;
     blurColor += texture2D(u_clearBg, fitted_uv + vec2(-blurRadius, 0.0)) * 0.09;
-    
-    // Normalize color
     blurColor = blurColor / (0.15 + 0.12 * 4.0 + 0.09 * 4.0);
     
-    // 5. Fog Layer (Smooth, no procedural noise)
-    vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0); // Slightly cool white
+    vec4 fogTint = vec4(0.92, 0.96, 1.0, 1.0);
     float fogAlpha = 0.3 + u_fogDensity * 0.6;
     vec4 compositeFog = mix(blurColor, fogTint, fogAlpha);
     
-    // 6. Final mix based on mask
     vec4 finalColor = mix(compositeFog, clearColor, mask);
     
-    // 7. Specular highlight
+    // Specular highlight ONLY for drips
     float edge = length(normal);
-    float spec = pow(max(0.0, edge), 4.0) * 0.4;
+    float spec = pow(max(0.0, edge), 4.0) * 0.6 * isDrip;
     finalColor += vec4(spec);
 
     gl_FragColor = finalColor;
@@ -129,7 +115,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
   const waterGrid = useRef<Map<string, number>>(new Map());
   const animationFrameRef = useRef<number>(0);
   
-  // WebGL States
   const glRef = useRef<WebGLRenderingContext | null>(null);
   const programRef = useRef<WebGLProgram | null>(null);
   const texturesRef = useRef<{ bg?: WebGLTexture; mask?: WebGLTexture }>({});
@@ -154,13 +139,11 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     }
   }));
 
-  // --- Initial Setup ---
   useEffect(() => {
     const gl = glCanvasRef.current?.getContext('webgl', { preserveDrawingBuffer: true });
     if (!gl) return;
     glRef.current = gl;
 
-    // Helper: Create Shader
     const createShader = (type: number, source: string) => {
       const s = gl.createShader(type)!;
       gl.shaderSource(s, source);
@@ -174,7 +157,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.linkProgram(program);
     programRef.current = program;
 
-    // Setup Geometry (Full-screen quad)
     const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -184,11 +166,9 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.enableVertexAttribArray(posAttrib);
     gl.vertexAttribPointer(posAttrib, 2, gl.FLOAT, false, 0, 0);
 
-    // Initial texture slots
     texturesRef.current.bg = gl.createTexture()!;
     texturesRef.current.mask = gl.createTexture()!;
 
-    // Start loop
     const render = (time: number) => {
       updatePhysics();
       drawShader(time * 0.001);
@@ -199,7 +179,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     return () => cancelAnimationFrame(animationFrameRef.current);
   }, []);
 
-  // --- Handle Image Load ---
   useEffect(() => {
     const gl = glRef.current;
     if (!gl || !texturesRef.current.bg) return;
@@ -217,7 +196,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     };
     img.src = imageUrl;
 
-    // Resize canvases
     if (containerRef.current && glCanvasRef.current) {
       const { width, height } = containerRef.current.getBoundingClientRect();
       glCanvasRef.current.width = width;
@@ -233,12 +211,14 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     if (!maskCtx) return;
 
     maskCtx.globalCompositeOperation = 'source-over';
-    maskCtx.fillStyle = 'rgba(255, 255, 255, 1.0)';
     
     for (let i = dripsRef.current.length - 1; i >= 0; i--) {
       const drip = dripsRef.current[i];
       maskCtx.beginPath();
       maskCtx.arc(drip.x, drip.y, drip.width / 2, 0, Math.PI * 2);
+      
+      // Use Green channel (G) to mark this as a drip
+      maskCtx.fillStyle = 'rgba(0, 255, 0, 1.0)';
       maskCtx.fill();
 
       drip.speed += 0.06 * settings.dripSpeed;
@@ -257,7 +237,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
 
     gl.useProgram(program);
 
-    // Update Mask Texture from 2D Canvas
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, texturesRef.current.mask!);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, maskCanvasRef.current);
@@ -266,7 +245,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    // Set Uniforms
     gl.uniform1i(gl.getUniformLocation(program, 'u_clearBg'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
     gl.uniform1f(gl.getUniformLocation(program, 'u_fogDensity'), settings.blurAmount / 40);
@@ -280,7 +258,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   };
 
-  // --- Input Handlers ---
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = glCanvasRef.current;
     if (!canvas) return null;
@@ -319,7 +296,10 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     if (!ctx) return;
     const radius = settings.brushSize;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = 'white';
+    
+    // User strokes: Red channel (R) = 255, Alpha = 255
+    // This makes them fully opaque but carries no Green (drip) signal
+    ctx.strokeStyle = 'rgba(255, 0, 0, 1.0)';
     ctx.lineWidth = radius * 2;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -327,7 +307,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
     ctx.lineTo(x2, y2);
     ctx.stroke();
 
-    // Drip Logic
     const dist = Math.hypot(x2 - x1, y2 - y1);
     const steps = Math.max(1, Math.floor(dist / (radius * 0.25)));
     for (let i = 0; i < steps; i++) {
