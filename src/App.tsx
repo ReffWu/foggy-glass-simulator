@@ -67,108 +67,102 @@ export default function App() {
           <div className="absolute inset-0">
             <FoggyWindow ref={foggyWindowRef} imageUrl={imageUrl} settings={settings} />
             
-            {/* Top Right Mini Settings Trigger */}
-            <div className="absolute top-6 right-6 z-50">
-              <button
-                onClick={() => togglePanel('settings')}
-                className={`p-3 rounded-full transition-all shadow-2xl backdrop-blur-3xl border border-white/20 flex items-center justify-center ${
-                  activePanel === 'settings' 
-                  ? 'bg-white text-black scale-90 opacity-0 pointer-events-none' 
-                  : 'bg-black/40 text-white hover:bg-white/20 scale-100 opacity-100'
-                }`}
-                title="Settings"
-              >
-                <Settings2 className="w-6 h-6" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* Floating Panels (Settings) */}
-            <div className={`absolute transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] z-50 ${
-              activePanel === 'settings'
-              ? 'top-6 right-6 translate-x-0 translate-y-0 opacity-100 scale-100 pointer-events-auto'
-              : 'top-6 right-6 translate-x-4 -translate-y-4 opacity-0 scale-50 pointer-events-none'
-            } w-[calc(100%-3rem)] sm:w-80 origin-top-right`}>
+            {/* Unified Top Right Controls */}
+            <div className="absolute top-6 right-6 z-50 flex flex-col items-end gap-4">
               
-              <div className="w-full bg-black/90 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-6 sm:p-7 shadow-2xl overflow-hidden">
-                <div className="flex justify-between items-center mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-white/10 p-2 rounded-2xl">
-                      <Settings2 className="w-5 h-5 text-white" strokeWidth={2} />
-                    </div>
-                    <h3 className="font-bold tracking-tight text-xl">Settings</h3>
-                  </div>
-                  <button 
-                    onClick={() => setActivePanel(null)} 
-                    className="text-white/50 hover:text-white transition-colors bg-white/10 rounded-full p-2"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+              {/* Main Trigger & Quick Actions */}
+              <div className="flex items-center gap-2 p-2 bg-black/40 backdrop-blur-3xl border border-white/20 rounded-full shadow-2xl">
+                <button
+                  onClick={() => togglePanel('gallery')}
+                  className={`p-2.5 rounded-full transition-all ${activePanel === 'gallery' ? 'bg-white text-black' : 'text-white hover:bg-white/20'}`}
+                  title="Gallery"
+                >
+                  <ImageIcon className="w-5 h-5" strokeWidth={1.5} />
+                </button>
                 
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm font-semibold text-white/90 tracking-wide">
-                      <label>Fog Density</label>
-                      <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{Math.round((settings.blurAmount / 40) * 100)}%</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="0" max="40" step="1"
-                      value={settings.blurAmount}
-                      onChange={(e) => setSettings({...settings, blurAmount: Number(e.target.value)})}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
-                    />
+                <button
+                  onClick={() => foggyWindowRef.current?.resetFog()}
+                  className="p-2.5 rounded-full text-white hover:bg-white/20 transition-all active:scale-90"
+                  title="Reset"
+                >
+                  <Eraser className="w-5 h-5" strokeWidth={1.5} />
+                </button>
+
+                <button
+                  onClick={() => foggyWindowRef.current?.exportImage()}
+                  className="p-2.5 rounded-full text-white hover:bg-white/20 transition-all active:scale-90"
+                  title="Save"
+                >
+                  <Download className="w-5 h-5" strokeWidth={1.5} />
+                </button>
+
+                <div className="w-px h-6 bg-white/20 mx-1" />
+
+                <button
+                  onClick={() => togglePanel('settings')}
+                  className={`p-2.5 rounded-full transition-all ${activePanel === 'settings' ? 'bg-white text-black' : 'text-white hover:bg-white/20'}`}
+                  title="Settings"
+                >
+                  <Settings2 className="w-5 h-5" strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {/* Settings Island */}
+              <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] origin-top-right ${
+                activePanel === 'settings' 
+                ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+                : 'opacity-0 scale-90 -translate-y-4 pointer-events-none absolute'
+              } w-72 sm:w-80`}>
+                <div className="bg-black/90 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-6 shadow-2xl">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="font-bold tracking-tight text-lg">Settings</h3>
+                    <button onClick={() => setActivePanel(null)} className="text-white/40 hover:text-white"><X className="w-5 h-5"/></button>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm font-semibold text-white/90 tracking-wide">
-                      <label>Finger Size</label>
-                      <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{settings.brushSize}px</span>
+                  <div className="space-y-8 text-white/90">
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm font-semibold tracking-wide">
+                        <label>Fog Density</label>
+                        <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{Math.round((settings.blurAmount / 40) * 100)}%</span>
+                      </div>
+                      <input type="range" min="0" max="40" step="1" value={settings.blurAmount} onChange={(e) => setSettings({...settings, blurAmount: Number(e.target.value)})} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
                     </div>
-                    <input 
-                      type="range" 
-                      min="2" max="50" step="1"
-                      value={settings.brushSize}
-                      onChange={(e) => setSettings({...settings, brushSize: Number(e.target.value)})}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
-                    />
-                  </div>
+                    
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm font-semibold tracking-wide">
+                        <label>Finger Size</label>
+                        <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{settings.brushSize}px</span>
+                      </div>
+                      <input type="range" min="2" max="50" step="1" value={settings.brushSize} onChange={(e) => setSettings({...settings, brushSize: Number(e.target.value)})} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
+                    </div>
 
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm font-semibold text-white/90 tracking-wide">
-                      <label>Drip Gravity</label>
-                      <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{settings.dripSpeed.toFixed(1)}x</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm font-semibold tracking-wide">
+                        <label>Drip Gravity</label>
+                        <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-mono">{settings.dripSpeed.toFixed(1)}x</span>
+                      </div>
+                      <input type="range" min="0.1" max="3.0" step="0.1" value={settings.dripSpeed} onChange={(e) => setSettings({...settings, dripSpeed: Number(e.target.value)})} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
                     </div>
-                    <input 
-                      type="range" 
-                      min="0.1" max="3.0" step="0.1"
-                      value={settings.dripSpeed}
-                      onChange={(e) => setSettings({...settings, dripSpeed: Number(e.target.value)})}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
-                    />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Gallery Panel (Separate bottom placement) */}
-            <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-40 w-full max-w-[calc(100%-2rem)] sm:max-w-md px-4 pointer-events-none">
-              {activePanel === 'gallery' && (
-                <div className="w-full bg-black/90 sm:bg-black/40 backdrop-blur-3xl border border-white/20 rounded-3xl p-5 sm:p-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-200 overflow-y-auto max-h-[45vh]">
+              {/* Backgrounds Island */}
+              <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] origin-top-right ${
+                activePanel === 'gallery' 
+                ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+                : 'opacity-0 scale-90 -translate-y-4 pointer-events-none absolute'
+              } w-72 sm:w-80`}>
+                <div className="bg-black/90 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-6 shadow-2xl">
                   <div className="flex justify-between items-center mb-5">
-                    <h3 className="font-semibold tracking-tight text-lg text-white">Backgrounds</h3>
-                    <button onClick={() => setActivePanel(null)} className="text-white/70 hover:text-white transition-colors bg-white/10 rounded-full p-1.5">
-                      <X className="w-5 h-5" />
-                    </button>
+                    <h3 className="font-bold tracking-tight text-lg text-white">Gallery</h3>
+                    <button onClick={() => setActivePanel(null)} className="text-white/40 hover:text-white"><X className="w-5 h-5"/></button>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     {PRESET_IMAGES.map((preset) => (
                       <button
                         key={preset.id}
-                        onClick={() => {
-                          setImageUrl(preset.url);
-                          setActivePanel(null);
-                        }}
+                        onClick={() => { setImageUrl(preset.url); setActivePanel(null); }}
                         className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${imageUrl === preset.url ? 'border-white scale-95' : 'border-transparent hover:border-white/50'}`}
                       >
                         <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
@@ -179,54 +173,18 @@ export default function App() {
                       className="relative aspect-square rounded-2xl overflow-hidden border-2 border-dashed border-white/30 hover:border-white/60 hover:bg-white/10 transition-all flex flex-col items-center justify-center gap-2"
                     >
                       <Upload className="w-6 h-6 text-white/80" strokeWidth={1.5} />
-                      <span className="text-xs font-medium text-white/80">Custom</span>
+                      <span className="text-[10px] font-medium text-white/80 uppercase tracking-tighter">Custom</span>
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Floating Dock */}
-            <div className="absolute bottom-10 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 w-auto">
-              <div className="flex items-center gap-2 p-2 bg-black/70 sm:bg-black/40 backdrop-blur-3xl border border-white/20 rounded-full shadow-2xl ring-1 ring-white/10">
-                <button
-                  onClick={() => togglePanel('gallery')}
-                  className={`p-3 rounded-full transition-all ${activePanel === 'gallery' ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}
-                  title="Gallery"
-                >
-                  <ImageIcon className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={1.5} />
-                </button>
-                
-                <div className="w-px h-8 bg-white/20 mx-1" />
-                
-                <button
-                  onClick={() => foggyWindowRef.current?.resetFog()}
-                  className="p-3 rounded-full text-white hover:bg-white/10 transition-all active:scale-90"
-                  title="Reset Fog"
-                >
-                  <Eraser className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={1.5} />
-                </button>
-                
-                <button
-                  onClick={() => foggyWindowRef.current?.exportImage()}
-                  className="p-3 rounded-full text-white hover:bg-white/10 transition-all active:scale-90"
-                  title="Export Image"
-                >
-                  <Download className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={1.5} />
-                </button>
               </div>
+
             </div>
           </div>
         )}
       </main>
       
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        accept="image/*"
-        onChange={handleFileChange}
-      />
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
     </div>
   );
 }
