@@ -106,8 +106,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
         if (isUnmounted) return;
         
         ctx.clearRect(0, 0, width, height);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.filter = `blur(${settingsRef.current.blurAmount}px) brightness(0.85)`;
         
         const imgRatio = img.width / img.height;
         const canvasRatio = width / height;
@@ -124,13 +122,20 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
           offsetY = (height - drawHeight) / 2;
         }
 
-        const padding = settingsRef.current.blurAmount * 2;
-        ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
+        // Draw blurred image
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.filter = `blur(20px) brightness(0.85)`; // Fixed visual blur radius
         
-        ctx.filter = 'none';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        const padding = 40; 
+        ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
+        ctx.restore();
+        
+        // Draw fog overlay based on density
+        const density = settingsRef.current.blurAmount / 40; // 0 to 1
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.1 + density * 0.45})`;
         ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = 'rgba(180, 210, 255, 0.1)';
+        ctx.fillStyle = `rgba(180, 210, 255, ${density * 0.15})`;
         ctx.fillRect(0, 0, width, height);
       };
       img.src = imageUrl;
@@ -163,8 +168,6 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
       if (!ctx) return;
       
       ctx.clearRect(0, 0, width, height);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.filter = `blur(${settings.blurAmount}px) brightness(0.85)`;
       
       const imgRatio = img.width / img.height;
       const canvasRatio = width / height;
@@ -181,13 +184,20 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
         offsetY = (height - drawHeight) / 2;
       }
 
-      const padding = settings.blurAmount * 2;
-      ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
+      // Draw blurred image
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.filter = `blur(20px) brightness(0.85)`;
       
-      ctx.filter = 'none';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      const padding = 40;
+      ctx.drawImage(img, offsetX - padding, offsetY - padding, drawWidth + padding*2, drawHeight + padding*2);
+      ctx.restore();
+      
+      // Draw fog overlay based on density
+      const density = settings.blurAmount / 40; // 0 to 1
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.1 + density * 0.45})`;
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(180, 210, 255, 0.1)';
+      ctx.fillStyle = `rgba(180, 210, 255, ${density * 0.15})`;
       ctx.fillRect(0, 0, width, height);
     };
     img.src = imageUrl;

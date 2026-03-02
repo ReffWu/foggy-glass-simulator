@@ -85,7 +85,7 @@ export default function App() {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm font-medium text-white/80">
                         <label>Fog Density</label>
-                        <span>{settings.blurAmount}px</span>
+                        <span>{Math.round((settings.blurAmount / 40) * 100)}%</span>
                       </div>
                       <input 
                         type="range" 
