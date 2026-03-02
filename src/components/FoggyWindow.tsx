@@ -128,6 +128,8 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useImperativeHandle(ref, () => ({
     resetFog: () => {
       const maskCtx = maskCanvasRef.current.getContext('2d');
       maskCtx?.clearRect(0, 0, maskCanvasRef.current.width, maskCanvasRef.current.height);
@@ -303,7 +305,7 @@ const FoggyWindow = forwardRef<FoggyWindowHandle, FoggyWindowProps>(({ imageUrl,
   const drawMask = (x1: number, y1: number, x2: number, y2: number) => {
     const ctx = maskCanvasRef.current.getContext('2d');
     if (!ctx) return;
-    const radius = settings.brushSize;
+    const radius = settingsRef.current.brushSize;
     ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = 'rgba(255, 0, 0, 1.0)';
     ctx.lineWidth = radius * 2;
